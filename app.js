@@ -3,15 +3,21 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
-const passport = require('passport');
+
+var LocalStorage = require('node-localstorage').LocalStorage,
+localStorage = new LocalStorage('./scratch');
+
+const cors = require("cors");
+
+
  
 const app = express();
+app.use(cors());
 const urlencodedParser = bodyParser.urlencoded({extended: false});
+app.use(bodyParser.json());
 
 const keys = 'dev-jwt';
-
-app.use(passport.initialize());
-// require('./middleware/passport')(passport)
+localStorage.token = '';
 
 // определяем объект Sequelize
 const sequelize = new Sequelize('book_store', 'oleg', '12345678', {
@@ -49,45 +55,31 @@ sequelize.sync().then(()=>{
   });
 }).catch(err=>console.log(err));
 
-
-const JwtStrategy = require('passport-jwt').Strategy;
-const ExtractJwt = require('passport-jwt').ExtractJwt;
-
-const options = {
-    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-    secretOrKey: keys
-}
-
-function passportT(passport) {
-    passport.use(
-        new JwtStrategy(options, async (payload, done) => {
-          const user = await User.findAll({where: {id: payload.userId}, raw: true})
-          .then(data => {
-            return {
-              id: data.id,
-              login: data.name
-            }
-          })
-
-          if (user) {
-            done(null, user)
-          } else {
-            done(null, false)
-          }
-        })
-    )
-}
-
 // получение данных
-app.get("/", passportT.authenticate('jwt', {session: false}), function(req, res){
-    User.findAll({raw: true }).then(data=>{
-      res.render("index.hbs", {
-        users: data
+app.get("/", function(req, res){
+  let decoded;
+  try {
+    decoded = jwt.verify(req.headers['access-token'], keys).login;
+  } catch {
+    decoded = null;
+  }
+  console.log(decoded)
+    if(decoded){
+      User.findAll({raw: true }).then(data=>{
+        res.status(200).json({
+          users: data
+        });
+      }).catch(err=>console.log(err));
+    } else {
+      res.status(404).json({
+        message: 'Ошибка аутентификации.'
       });
-    }).catch(err=>console.log(err));
+    }
 });
 
 app.get("/login", function(req, res){
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
   res.render("login.hbs");
 });
 
@@ -95,24 +87,10 @@ app.get("/registration", function(req, res){
   res.render("registration.hbs");
 });
  
-app.get("/create", function(req, res){
-    res.render("create.hbs");
-});
- 
 // добавление данных
-app.post("/create", urlencodedParser, function (req, res) {
-         
-    if(!req.body) return res.sendStatus(400);
-         
-    const username = req.body.name;
-    const userage = req.body.age;
-    User.create({ name: username, age: userage}).then(()=>{
-      res.redirect("/");
-    }).catch(err=>console.log(err));
-});
 
 app.post("/login", urlencodedParser, async function(req, res){
-  const user = await User.findAll({where: {name: req.body.name}, raw: true})
+  const user = await User.findAll({where: {name: req.body.login}, raw: true})
   .then(data => data[0])
 
   if (user) {
@@ -123,8 +101,10 @@ app.post("/login", urlencodedParser, async function(req, res){
         userId: user._id
       }, keys, {expiresIn: 60 * 60})
 
+      localStorage.token = token;
+
       res.status(200).json({
-        token: `Bearer ${token}`
+        token: token
       })
     } else {
       res.status(401).json({
@@ -185,6 +165,11 @@ app.post("/edit", urlencodedParser, function (req, res) {
     res.redirect("/");
   })
   .catch(err=>console.log(err));
+});
+
+app.post("/logout", function (req, res) {
+  localStorage.removeItem('token');
+  res.redirect("/login");
 });
  
 // удаление данных
