@@ -3,11 +3,15 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
+const passport = require('passport');
  
 const app = express();
 const urlencodedParser = bodyParser.urlencoded({extended: false});
 
 const keys = 'dev-jwt';
+
+app.use(passport.initialize());
+// require('./middleware/passport')(passport)
 
 // определяем объект Sequelize
 const sequelize = new Sequelize('book_store', 'oleg', '12345678', {
@@ -44,9 +48,38 @@ sequelize.sync().then(()=>{
     console.log("Сервер ожидает подключения...");
   });
 }).catch(err=>console.log(err));
- 
+
+
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
+
+const options = {
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: keys
+}
+
+function passportT(passport) {
+    passport.use(
+        new JwtStrategy(options, async (payload, done) => {
+          const user = await User.findAll({where: {id: payload.userId}, raw: true})
+          .then(data => {
+            return {
+              id: data.id,
+              login: data.name
+            }
+          })
+
+          if (user) {
+            done(null, user)
+          } else {
+            done(null, false)
+          }
+        })
+    )
+}
+
 // получение данных
-app.get("/", function(req, res){
+app.get("/", passportT.authenticate('jwt', {session: false}), function(req, res){
     User.findAll({raw: true }).then(data=>{
       res.render("index.hbs", {
         users: data
