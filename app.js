@@ -4,20 +4,15 @@ const bodyParser = require("body-parser");
 const bcrypt = require('bcryptjs');
 const jwt = require("jsonwebtoken");
 
-var LocalStorage = require('node-localstorage').LocalStorage,
-localStorage = new LocalStorage('./scratch');
-
 const cors = require("cors");
 
 
  
 const app = express();
 app.use(cors());
-const urlencodedParser = bodyParser.urlencoded({extended: false});
 app.use(bodyParser.json());
 
 const keys = 'dev-jwt';
-localStorage.token = '';
 
 // определяем объект Sequelize
 const sequelize = new Sequelize('book_store', 'oleg', '12345678', {
@@ -45,9 +40,7 @@ const User = sequelize.define("user", {
     allowNull: false
   }
 });
- 
-app.set("view engine", "hbs");
- 
+
 // синхронизация с бд, после успшной синхронизации запускаем сервер
 sequelize.sync().then(()=>{
   app.listen(3000, function(){
@@ -63,33 +56,22 @@ app.get("/", function(req, res){
   } catch {
     decoded = null;
   }
-  console.log(decoded)
-    if(decoded){
-      User.findAll({raw: true }).then(data=>{
-        res.status(200).json({
-          users: data
-        });
-      }).catch(err=>console.log(err));
-    } else {
-      res.status(404).json({
-        message: 'Ошибка аутентификации.'
+  if(decoded){
+    User.findAll({raw: true }).then(data=>{
+      res.status(200).json({
+        users: data
       });
-    }
-});
-
-app.get("/login", function(req, res){
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  res.render("login.hbs");
-});
-
-app.get("/registration", function(req, res){
-  res.render("registration.hbs");
+    }).catch(err=>console.log(err));
+  } else {
+    res.status(404).json({
+      message: 'Ошибка аутентификации.'
+    });
+  }
 });
  
 // добавление данных
 
-app.post("/login", urlencodedParser, async function(req, res){
+app.post("/login", async function(req, res){
   const user = await User.findAll({where: {name: req.body.login}, raw: true})
   .then(data => data[0])
 
@@ -100,8 +82,6 @@ app.post("/login", urlencodedParser, async function(req, res){
         login: user.name,
         userId: user._id
       }, keys, {expiresIn: 60 * 60})
-
-      localStorage.token = token;
 
       res.status(200).json({
         token: token
@@ -118,64 +98,62 @@ app.post("/login", urlencodedParser, async function(req, res){
   }
 });
 
-app.post("/registration", urlencodedParser, async function(req, res){
-  const newUser = await User.findAll({where: {name: req.body.name}, raw: true })
-  .then(data => data.length)
+app.post("/registration", async function(req, res){
+  console.log(req)
+  const candidate = await User.findOne({where: {name: req.body.email}, raw: true })
+  .then(data => data)
 
-  if (newUser){
+  if (candidate){
     res.status(409).json({
       message: 'Данный логин уже используется.'
     })
   } else {
     const salt = bcrypt.genSaltSync(10)
-    const login = req.body.name;
+    const login = req.body.email;
     const password = req.body.password;
+    const user = await User.create({ name: login, password: bcrypt.hashSync(password, salt)})
+    .catch(err=>console.log(err));
+    console.log('user', user)
+    const token = jwt.sign({
+      login: user.name,
+      userId: user._id
+    }, keys, {expiresIn: 60 * 60})
 
-    User.create({ name: login, password: bcrypt.hashSync(password, salt)})
-    .then(()=>{
-      res.status(201).json({
-        login: login,
-        password: bcrypt.hashSync(password, salt)
-      })
-    }).catch(err=>console.log(err));
+    res.status(201).json({
+      token : token,
+      login: login,
+      password: bcrypt.hashSync(password, salt)
+    })
   }
 });
 
-// получаем объект по id для редактирования
-app.get("/edit/:id", function(req, res){
-  const userid = req.params.id;
-  User.findAll({where:{id: userid}, raw: true })
-  .then(data=>{
-    res.render("edit.hbs", {
-      user: data[0]
-    });
-  })
-  .catch(err=>console.log(err));
-});
- 
-// обновление данных в БД
-app.post("/edit", urlencodedParser, function (req, res) {
-         
-  if(!req.body) return res.sendStatus(400);
- 
-  const username = req.body.name;
-  const userage = req.body.age;
-  const userid = req.body.id;
-  User.update({name:username, age: userage}, {where: {id: userid} }).then(() => {
-    res.redirect("/");
-  })
-  .catch(err=>console.log(err));
-});
 
-app.post("/logout", function (req, res) {
-  localStorage.removeItem('token');
-  res.redirect("/login");
+app.get("/profile", async function(req, res){
+  let decoded;
+  try {
+    decoded = await jwt.verify(req.headers['access-token'], keys);
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      res.status(401).json({
+        message: error.message,
+        user: {
+          email: ''
+        }
+      })
+    }
+  } 
+  
+  if(decoded){
+    User.findOne({where: {name: decoded.login}}).then(data=>{
+      console.log(decoded)
+      res.status(200).json({
+        user: data
+      });
+    }).catch(err=>console.log(err));
+  } else {
+    res.status(404).json({
+      message: 'Ошибка аутентификации.'
+    });
+  }
 });
  
-// удаление данных
-app.post("/delete/:id", function(req, res){  
-  const userid = req.params.id;
-  User.destroy({where: {id: userid} }).then(() => {
-    res.redirect("/");
-  }).catch(err=>console.log(err));
-});

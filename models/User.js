@@ -1,13 +1,13 @@
 const Sequelize = require("sequelize");
 
-const User = sequelize.define("user", {
+export const User = sequelize.define("user", {
   id: {
     type: Sequelize.INTEGER,
     autoIncrement: true,
     primaryKey: true,
     allowNull: false
   },
-  email: {
+  name: {
     type: Sequelize.STRING,
     allowNull: false
   },
@@ -16,22 +16,3 @@ const User = sequelize.define("user", {
     allowNull: false
   }
 });
-
-
-'use strict';
-
-const {
-  Model
-} = require('sequelize');
-module.exports = (sequelize, DataTypes) => {
-  User.init({
-    email: DataTypes.STRING,
-    password: DataTypes.STRING,
-    avatar: DataTypes.STRING,
-  }, {
-    sequelize,
-    timestamps: true,
-    modelName: 'user',
-  });
-  return User;
-};
