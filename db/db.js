@@ -1,28 +1,21 @@
-//connect db
-const Sequelize = require("sequelize");
+const Sequelize = require('sequelize')
+const UserModel = require('../models/User')
 
-const db = new Sequelize('book_store', 'oleg', '12345678', {
-    host: 'localhost',
-    dialect: "postgres"
+const sequelize = new Sequelize('book_store', 'oleg', '12345678', {
+    dialect: "postgres",
+    host: "localhost",
+    define: {
+      timestamps: false
+    }
 });
 
-const User = db.define('user', {
-    name: Sequelize.STRING,
-}, {
-    tableName: 'user'
-})
+const User = UserModel(sequelize, Sequelize)
 
-db.sync({ force: true }).then(() => {
-    User.create({
-        name: 'admin',
-    })
-})
-
-User.findAll({raw:true}).then(users => {
-    console.log(users);
-}).catch(err => console.log(err));
+sequelize.sync()
+  .then(() => {
+    console.log(`Database & tables created!`)
+  })
 
 module.exports = {
-    db,
-    User,
+  User
 }
