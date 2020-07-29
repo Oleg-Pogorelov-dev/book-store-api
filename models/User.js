@@ -15,6 +15,10 @@ module.exports = (sequelize, type) => {
     password: {
       type: Sequelize.STRING,
       allowNull: false
+    },
+    refresh_token: {
+      type: Sequelize.STRING,
+      allowNull: false
     }
   }, {
     sequelize,

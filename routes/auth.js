@@ -2,8 +2,9 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cors = require("cors");
+const { v4: uuidv4 } = require('uuid');
 
-const { User } = require('../db/db')
+const { User } = require('../db/db');
 
 const router = express.Router();
 router.use(cors());
@@ -31,8 +32,7 @@ const keys = 'dev-jwt';
 // });
   
 router.post("/login", async function(req, res){
-  const user = await User.findAll({where: {email: req.body.email}, raw: true})
-  .then(data => data[0])
+  const user = await User.findOne({where: {email: req.body.email}})
 
   if (user && req.body.email) {
     const passwordResult = bcrypt.compareSync(req.body.password, user.password)
@@ -41,9 +41,16 @@ router.post("/login", async function(req, res){
         email: user.email,
         userId: user._id
       }, keys, {expiresIn: 60 * 60})
+      const refresh_token = jwt.sign({
+        id: uuidv4(),
+      }, keys, {expiresIn: 1000000})
+
+      user.refresh_token = refresh_token;
+      await user.save();
 
       res.status(200).json({
-        token: token
+        token: token,
+        refresh_token: refresh_token
       })
     } else {
       res.status(401).json({
@@ -73,7 +80,15 @@ router.post("/registration", async function(req, res){
     const salt = bcrypt.genSaltSync(10)
     const email = req.body.email;
     const password = req.body.password;
-    const user = await User.create({ email: email, password: bcrypt.hashSync(password, salt)})
+    const refresh_token = jwt.sign({
+      id: uuidv4(),
+    }, keys, {expiresIn: 1000000})
+
+    const user = await User.create({ 
+      email: email, 
+      password: bcrypt.hashSync(password, salt),
+      refresh_token: refresh_token
+    })
     .catch(err=>console.log(err));
     const token = jwt.sign({
       email: user.email,
@@ -82,6 +97,7 @@ router.post("/registration", async function(req, res){
 
     res.status(201).json({
       token : token,
+      refresh_token: refresh_token,
       email: email,
       password: bcrypt.hashSync(password, salt)
     })
