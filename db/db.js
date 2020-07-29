@@ -1,5 +1,6 @@
 const Sequelize = require('sequelize')
 const UserModel = require('../models/User')
+const BookModel = require('../models/Book')
 
 const sequelize = new Sequelize('book_store', 'oleg', '12345678', {
     dialect: "postgres",
@@ -10,6 +11,7 @@ const sequelize = new Sequelize('book_store', 'oleg', '12345678', {
 });
 
 const User = UserModel(sequelize, Sequelize)
+const Book = BookModel(sequelize, Sequelize)
 
 sequelize.sync()
   .then(() => {
@@ -17,5 +19,6 @@ sequelize.sync()
   })
 
 module.exports = {
-  User
+  User,
+  Book
 }

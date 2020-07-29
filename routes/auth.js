@@ -9,27 +9,7 @@ const { User } = require('../db/db');
 const router = express.Router();
 router.use(cors());
 
-const keys = 'dev-jwt';
-
-// router.get("/", function(req, res){
-//   let decoded;
-//   try {
-//     decoded = jwt.verify(req.headers['access-token'], keys).email;
-//   } catch {
-//     decoded = null;
-//   }
-//   if(decoded){
-//     User.findAll({raw: true }).then(data=>{
-//       res.status(200).json({
-//         users: data
-//       });
-//     }).catch(err=>console.log(err));
-//   } else {
-//     res.status(404).json({
-//       message: 'Ошибка аутентификации.'
-//     });
-//   }
-// });
+const { keyJwt } = require('../helpers/secretKeys');
   
 router.post("/login", async function(req, res){
   const user = await User.findOne({where: {email: req.body.email}})
@@ -40,10 +20,10 @@ router.post("/login", async function(req, res){
       const token = jwt.sign({
         email: user.email,
         userId: user._id
-      }, keys, {expiresIn: 60 * 60})
+      }, keyJwt, {expiresIn: 60 * 60})
       const refresh_token = jwt.sign({
         id: uuidv4(),
-      }, keys, {expiresIn: 1000000})
+      }, keyJwt, {expiresIn: 1000000})
 
       user.refresh_token = refresh_token;
       await user.save();
@@ -82,7 +62,7 @@ router.post("/registration", async function(req, res){
     const password = req.body.password;
     const refresh_token = jwt.sign({
       id: uuidv4(),
-    }, keys, {expiresIn: 1000000})
+    }, keyJwt, {expiresIn: 1000000})
 
     const user = await User.create({ 
       email: email, 
@@ -90,16 +70,16 @@ router.post("/registration", async function(req, res){
       refresh_token: refresh_token
     })
     .catch(err=>console.log(err));
+
     const token = jwt.sign({
       email: user.email,
       userId: user._id
-    }, keys, {expiresIn: 60 * 60})
+    }, keyJwt, {expiresIn: 60 * 60})
 
     res.status(201).json({
       token : token,
       refresh_token: refresh_token,
       email: email,
-      password: bcrypt.hashSync(password, salt)
     })
   }
 });
@@ -108,22 +88,32 @@ router.post("/registration", async function(req, res){
 router.get("/profile", async function(req, res){
   let decoded;
   try {
-    decoded = await jwt.verify(req.headers['access-token'], keys);
+    decoded = await jwt.verify(req.headers['access-token'], keyJwt);
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      res.status(401).json({
-        message: error.message,
-        user: {
-          email: ''
-        }
-      })
+      const user = await User.findOne({where: {refresh_token: req.headers['refresh-token']}, raw: true })
+      if (user) {
+        const token = jwt.sign({
+          email: user.email,
+          userId: user._id
+        }, keyJwt, {expiresIn: 60 * 60})
+        res.status(201).json({
+          user: user.email,
+          token: token
+        });
+      } else {
+        res.status(401).json({
+          message: error.message,
+          user: ''
+        })
+      }
     }
   } 
   
   if(decoded){
     User.findOne({where: {email: decoded.email}}).then(data=>{
       res.status(200).json({
-        user: data
+        user: data.email
       });
     }).catch(err=>console.log(err));
   } else {
