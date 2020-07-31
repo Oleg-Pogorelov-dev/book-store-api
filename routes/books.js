@@ -1,68 +1,103 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const cors = require("cors");
-
-const { Book } = require('../db/db');
-const { checkToken } = require('../helpers/checkToken');
-const { keyJwt } = require('../helpers/secretKeys');
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const { v4: uuidv4 } = require("uuid");
 
 const router = express.Router();
-router.use(cors());
+const DIR = "./public/";
+const { Book } = require("../db/db");
+const { keyJwt } = require("../helpers/secretKeys");
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, DIR);
+  },
+  filename: (req, file, cb) => {
+    const fileName = file.originalname.toLowerCase().split(" ").join("-");
+    cb(null, uuidv4() + "-" + fileName);
+  },
+});
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype == "image/png" ||
+      file.mimetype == "image/jpg" ||
+      file.mimetype == "image/jpeg"
+    ) {
+      cb(null, true);
+    } else {
+      cb(null, false);
+      return cb(new Error("Only .png, .jpg and .jpeg format allowed!"));
+    }
+  },
+});
 
-router.get("/", async function(req, res){
+router.get("/", async function (req, res) {
   let decoded;
   try {
-    decoded = await jwt.verify(req.headers['access-token'], keyJwt);
+    decoded = await jwt.verify(req.headers["access-token"], keyJwt);
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      const user = await User.findOne({where: {refresh_token: req.headers['refresh-token']}, raw: true })
+    if (error.name === "TokenExpiredError") {
+      const user = await User.findOne({
+        where: { refresh_token: req.headers["refresh-token"] },
+        raw: true,
+      });
       if (user) {
-        const token = jwt.sign({
-          email: user.email,
-          userId: user._id
-        }, keyJwt, {expiresIn: 60 * 60})
+        const token = jwt.sign(
+          {
+            email: user.email,
+            userId: user._id,
+          },
+          keyJwt,
+          { expiresIn: 60 * 60 }
+        );
         res.status(201).json({
           user: user.email,
-          token: token
+          token: token,
         });
       } else {
         res.status(401).json({
           message: error.message,
-          user: ''
-        })
+          user: "",
+        });
       }
     }
   }
-  
-  if(decoded){
-    await Book.findAll().then(data=>{
-      res.status(200).json({
-        books: data
-      });
-    }).catch(err=>console.log(err));
+
+  if (decoded) {
+    await Book.findAll()
+      .then((data) => {
+        res.status(200).json({
+          books: data,
+        });
+      })
+      .catch((err) => console.log(err));
   } else {
     res.status(404).json({
-      message: 'Ошибка аутентификации.'
+      message: "Ошибка аутентификации.",
     });
   }
 });
 
-router.post("/add_book", async function(req, res){
-  if (!req.body.title){
+router.post("/add_book", upload.single("img"), async function (req, res) {
+  const url = req.protocol + "://" + req.get("host");
+  if (!req.body.title) {
     res.status(401).json({
-      message: 'Название не может быть пустым'
-    })
+      message: "Название не может быть пустым",
+    });
   } else {
-    await Book.create({ 
-      title: req.body.title
+    await Book.create({
+      title: req.body.title,
+      img: url + "/" + req.file.filename,
     })
-    .then(data=>{
-      res.status(200).json({
-        message: `Книга ${data.title} успешно добавлена.`
+
+      .then((data) => {
+        res.status(200).json({
+          message: `Книга ${data.title} успешно добавлена.`,
+        });
       })
-    })
-    .catch(err=>console.log(err));
+      .catch((err) => console.log(err));
   }
 });
-  
+
 module.exports = router;
