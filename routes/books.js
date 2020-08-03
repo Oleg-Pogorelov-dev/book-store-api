@@ -7,6 +7,7 @@ const router = express.Router();
 const DIR = "./public/";
 const { Book } = require("../db/db");
 const { keyJwt } = require("../helpers/secretKeys");
+const { checkAccessToken } = require("../middleware/auth");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, DIR);
@@ -32,51 +33,14 @@ const upload = multer({
   },
 });
 
-router.get("/", async function (req, res) {
-  let decoded;
-  try {
-    decoded = await jwt.verify(req.headers["access-token"], keyJwt);
-  } catch (error) {
-    if (error.name === "TokenExpiredError") {
-      const user = await User.findOne({
-        where: { refresh_token: req.headers["refresh-token"] },
-        raw: true,
+router.get("/", checkAccessToken, async function (req, res) {
+  Book.findAll()
+    .then((data) => {
+      res.status(200).json({
+        books: data,
       });
-      if (user) {
-        const token = jwt.sign(
-          {
-            email: user.email,
-            userId: user._id,
-          },
-          keyJwt,
-          { expiresIn: 60 * 60 }
-        );
-        res.status(201).json({
-          user: user.email,
-          token: token,
-        });
-      } else {
-        res.status(401).json({
-          message: error.message,
-          user: "",
-        });
-      }
-    }
-  }
-
-  if (decoded) {
-    await Book.findAll()
-      .then((data) => {
-        res.status(200).json({
-          books: data,
-        });
-      })
-      .catch((err) => console.log(err));
-  } else {
-    res.status(404).json({
-      message: "Ошибка аутентификации.",
-    });
-  }
+    })
+    .catch((err) => console.log(err));
 });
 
 router.post("/add_book", upload.single("img"), async function (req, res) {
@@ -86,7 +50,7 @@ router.post("/add_book", upload.single("img"), async function (req, res) {
       message: "Название не может быть пустым",
     });
   } else {
-    await Book.create({
+    Book.create({
       title: req.body.title,
       img: url + "/" + req.file.filename,
     })

@@ -1,24 +1,26 @@
-const Sequelize = require('sequelize')
-const UserModel = require('../models/User')
-const BookModel = require('../models/Book')
+const Sequelize = require("sequelize");
+const UserModel = require("../models/User");
+const BookModel = require("../models/Book");
+const OrderModel = require("../models/Order");
+const AuthorModel = require("../models/Author");
 
-const sequelize = new Sequelize('book_store', 'oleg', '12345678', {
-    dialect: "postgres",
-    host: "localhost",
-    define: {
-      timestamps: false
-    }
+const sequelize = new Sequelize("book_store", "oleg", "12345678", {
+  dialect: "postgres",
+  host: "localhost",
 });
 
-const User = UserModel(sequelize, Sequelize)
-const Book = BookModel(sequelize, Sequelize)
+const User = UserModel(sequelize, Sequelize);
+const Book = BookModel(sequelize, Sequelize);
+const Order = OrderModel(sequelize, Sequelize);
+const Author = AuthorModel(sequelize, Sequelize);
 
-sequelize.sync()
-  .then(() => {
-    console.log(`Database & tables created!`)
-  })
+sequelize.sync().then(() => {
+  console.log(`Database & tables created!`);
+});
 
 module.exports = {
   User,
-  Book
-}
+  Book,
+  Order,
+  Author,
+};
