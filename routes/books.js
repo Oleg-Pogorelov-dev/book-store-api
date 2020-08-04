@@ -34,7 +34,8 @@ const upload = multer({
 });
 
 router.get("/", checkAccessToken, async function (req, res) {
-  Book.findAll()
+  console.log(req.query);
+  Book.findAll({ limit: 2, offset: +req.query.offset })
     .then((data) => {
       res.status(200).json({
         books: data,

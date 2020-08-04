@@ -12,9 +12,8 @@ const {
   createRefreshToken,
 } = require("../middleware/auth");
 
-Author.findOne({ where: { id: 1 } }).then((author) => {
-  const autId = author.id;
-  Book.create({ title: "BOOK", AuthorId: autId });
+Author.findOne({ where: { id: 1 }, include: Book }).then((author) => {
+  author.createBook({ title: "gaga" });
 });
 
 router.post("/login", async function (req, res) {
@@ -24,7 +23,7 @@ router.post("/login", async function (req, res) {
     if (passwordResult) {
       console.log(user);
       const token = createAccessToken(user);
-      const refresh_token = createRefreshToken(user);
+      const refresh_token = await createRefreshToken(user);
 
       res.status(200).json({
         token,

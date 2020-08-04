@@ -14,6 +14,9 @@ const Book = BookModel(sequelize, Sequelize);
 const Order = OrderModel(sequelize, Sequelize);
 const Author = AuthorModel(sequelize, Sequelize);
 
+Author.hasMany(Book);
+Book.belongsTo(Author);
+
 sequelize.sync().then(() => {
   console.log(`Database & tables created!`);
 });
