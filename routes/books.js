@@ -6,7 +6,6 @@ const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
 const DIR = "./public/";
 const { Book } = require("../db/db");
-const { keyJwt } = require("../helpers/secretKeys");
 const { checkAccessToken } = require("../middleware/auth");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -34,11 +33,43 @@ const upload = multer({
 });
 
 router.get("/", checkAccessToken, async function (req, res) {
-  console.log(req.query);
-  Book.findAll({ limit: 2, offset: +req.query.offset })
+  console.log("FAFAFAFAFAFAF", req.query.genre);
+  if (req.query.genre.length) {
+    Book.findAndCountAll({
+      where: {
+        genre: {
+          $in: req.query.genre,
+        },
+      },
+      limit: 2,
+      offset: +req.query.offset,
+    })
+      .then((data) => {
+        res.status(200).json({
+          books: data,
+        });
+      })
+      .catch((err) => console.log(err));
+  }
+
+  Book.findAndCountAll({
+    limit: 2,
+    offset: +req.query.offset,
+    order: [["id", "DESC"]],
+  })
     .then((data) => {
       res.status(200).json({
         books: data,
+      });
+    })
+    .catch((err) => console.log(err));
+});
+
+router.get("/book", async function (req, res) {
+  Book.findOne({ where: { id: +req.query.id } })
+    .then((data) => {
+      res.status(200).json({
+        book: data,
       });
     })
     .catch((err) => console.log(err));

@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const router = express.Router();
 
-const { User, Author, Book } = require("../db/db");
+const { User } = require("../db/db");
 const { keyJwt } = require("../helpers/secretKeys");
 const {
   checkAccessToken,
@@ -12,16 +12,11 @@ const {
   createRefreshToken,
 } = require("../middleware/auth");
 
-Author.findOne({ where: { id: 1 }, include: Book }).then((author) => {
-  author.createBook({ title: "gaga" });
-});
-
 router.post("/login", async function (req, res) {
   try {
     const user = await User.findOne({ where: { email: req.body.email } });
     const passwordResult = bcrypt.compareSync(req.body.password, user.password);
     if (passwordResult) {
-      console.log(user);
       const token = createAccessToken(user);
       const refresh_token = await createRefreshToken(user);
 
