@@ -10,7 +10,7 @@ const createAccessToken = (user) => {
       userId: user._id,
     },
     keyJwt,
-    { expiresIn: 60 * 60 }
+    { expiresIn: 60 * 600000 }
   );
 
   return token;

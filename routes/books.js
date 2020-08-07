@@ -2,6 +2,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const { v4: uuidv4 } = require("uuid");
+const Sequelize = require("sequelize");
 
 const router = express.Router();
 const DIR = "./public/";
@@ -33,13 +34,10 @@ const upload = multer({
 });
 
 router.get("/", checkAccessToken, async function (req, res) {
-  console.log("FAFAFAFAFAFAF", req.query.genre);
-  if (req.query.genre.length) {
+  if (req.query.genre) {
     Book.findAndCountAll({
       where: {
-        genre: {
-          $in: req.query.genre,
-        },
+        genre: req.query.genre,
       },
       limit: 2,
       offset: +req.query.offset,
@@ -50,19 +48,19 @@ router.get("/", checkAccessToken, async function (req, res) {
         });
       })
       .catch((err) => console.log(err));
-  }
-
-  Book.findAndCountAll({
-    limit: 2,
-    offset: +req.query.offset,
-    order: [["id", "DESC"]],
-  })
-    .then((data) => {
-      res.status(200).json({
-        books: data,
-      });
+  } else {
+    Book.findAndCountAll({
+      limit: 2,
+      offset: +req.query.offset,
+      order: [["id", "DESC"]],
     })
-    .catch((err) => console.log(err));
+      .then((data) => {
+        res.status(200).json({
+          books: data,
+        });
+      })
+      .catch((err) => console.log(err));
+  }
 });
 
 router.get("/book", async function (req, res) {
@@ -94,6 +92,23 @@ router.post("/add_book", upload.single("img"), async function (req, res) {
       })
       .catch((err) => console.log(err));
   }
+});
+
+router.get("/search_book", async function (req, res) {
+  Book.findAll({
+    where: {
+      title: {
+        [Sequelize.Op.iLike]: req.query.search + "%",
+      },
+    },
+    limit: 10,
+  })
+    .then((data) => {
+      res.status(200).json({
+        books: data,
+      });
+    })
+    .catch((err) => console.log(err));
 });
 
 module.exports = router;
