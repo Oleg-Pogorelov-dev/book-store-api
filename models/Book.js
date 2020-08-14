@@ -9,12 +9,21 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       Book.belongsTo(models.Author, { foreignKey: "AuthorId" });
+      Book.belongsToMany(models.Order, {
+        through: "BookOrder",
+        as: "orders",
+        foreignKey: "bookId",
+        otherKey: "orderId",
+      });
     }
   }
   Book.init(
     {
       title: DataTypes.STRING,
-      img: DataTypes.STRING,
+      img: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        defaultValue: ["http://localhost:3000/download.png"],
+      },
       AuthorId: {
         type: DataTypes.INTEGER,
         allowNull: false,

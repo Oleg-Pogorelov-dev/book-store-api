@@ -10,9 +10,10 @@ const createAccessToken = (user) => {
       userId: user._id,
     },
     keyJwt,
-    { expiresIn: 60 * 600000 }
+    { expiresIn: 60 * 60 }
   );
 
+  console.log("USER", token);
   return token;
 };
 
@@ -48,16 +49,15 @@ const checkAccessToken = (req, res, next) => {
 };
 
 const checkRefreshToken = async (req, res, next) => {
-  console.log(req.headers["refresh-token"]);
   try {
     const user = await User.findOne({
       where: { refresh_token: req.headers["refresh-token"] },
     });
 
-    const token = createAccessToken();
-    const refresh_token = createRefreshToken(user);
+    const token = await createAccessToken(user);
+    const refresh_token = await createRefreshToken(user);
 
-    res.status(201).json({
+    return res.status(201).json({
       token,
       refresh_token,
     });
