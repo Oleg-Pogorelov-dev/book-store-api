@@ -7,6 +7,7 @@ const db = require("../models");
 const { Author } = db;
 
 router.post("/add_author", async function (req, res, next) {
+  console.log(req);
   try {
     if (!req.body.name) {
       return res.status(401).json({

@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       title: DataTypes.STRING,
       img: {
         type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: ["http://localhost:3000/download.png"],
+        defaultValue: ["download.png"],
       },
       AuthorId: {
         type: DataTypes.INTEGER,
@@ -31,6 +31,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       genre: DataTypes.STRING,
       price: DataTypes.INTEGER,
+      description: DataTypes.TEXT,
     },
     {
       sequelize,

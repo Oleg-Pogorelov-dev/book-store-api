@@ -13,7 +13,6 @@ const createAccessToken = (user) => {
     { expiresIn: 60 * 60 }
   );
 
-  console.log("USER", token);
   return token;
 };
 

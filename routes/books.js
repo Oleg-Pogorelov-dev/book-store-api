@@ -125,6 +125,7 @@ router.post("/add_book", upload.array("img"), async function (req, res, next) {
       title: req.body.title,
       price: req.body.price,
       genre: req.body.genre,
+      description: req.body.description,
       AuthorId: 1,
     });
 
