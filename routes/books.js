@@ -1,42 +1,13 @@
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
+const { upload } = require("../helpers/multer");
 const Sequelize = require("sequelize");
 
 const router = express.Router();
-const DIR = "./public/";
 const CustomError = require("../helpers/exceptions");
 const db = require("../models");
-const { Book } = db;
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, DIR);
-  },
-  filename: (req, file, cb) => {
-    const fileName = file.originalname.toLowerCase().split(" ").join("-");
-    cb(null, uuidv4() + "-" + fileName);
-  },
-});
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype == "image/png" ||
-      file.mimetype == "image/jpg" ||
-      file.mimetype == "image/jpeg"
-    ) {
-      cb(null, true);
-    } else {
-      cb(null, false);
-      return cb(new Error("Only .png, .jpg and .jpeg format allowed!"));
-    }
-  },
-});
+const { Book, Author } = db;
 
 router.get("/", async function (req, res, next) {
-  console.log("!!!!!!!!!!", req.query);
   try {
     if (req.query.title && req.query.genre) {
       const books = await Book.findAndCountAll({
@@ -94,6 +65,8 @@ router.get("/", async function (req, res, next) {
       books,
     });
   } catch (e) {
+    // console.log(e);
+    // throw Error("Something was wrong");
     throw new CustomError(e.original.message, 500);
   }
 });
@@ -112,7 +85,6 @@ router.get("/book", async function (req, res, next) {
 });
 
 router.post("/add_book", upload.array("img"), async function (req, res, next) {
-  console.log("RRRR", req);
   const url = req.protocol + "://" + req.get("host");
   try {
     if (!req.body.title) {
@@ -121,12 +93,14 @@ router.post("/add_book", upload.array("img"), async function (req, res, next) {
       });
     }
 
+    const author = await Author.findOne({ where: { name: req.body.name } });
+
     const book = await Book.create({
       title: req.body.title,
       price: req.body.price,
       genre: req.body.genre,
       description: req.body.description,
-      AuthorId: 1,
+      AuthorId: author.id,
     });
 
     if (req.files.length) {
@@ -162,6 +136,46 @@ router.get("/search_book", async function (req, res, next) {
     });
   } catch (e) {
     throw new CustomError(e.original.message, 500);
+  }
+});
+
+router.put("/update_book", async function (req, res, next) {
+  try {
+    const author = await Author.findOne({ where: { name: req.body.author } });
+    await Book.update(
+      {
+        title: req.body.title,
+        genre: req.body.genre,
+        price: +req.body.price,
+        description: req.body.description,
+        AuthorId: author.id,
+      },
+      { where: { id: req.body.id } }
+    );
+
+    return res.status(202).json({
+      message: "Информация успешно изменена",
+    });
+  } catch (e) {
+    res.status(409).json({
+      message: e,
+    });
+  }
+});
+
+router.delete("/delete_book", async function (req, res, next) {
+  try {
+    const book = await Book.findOne({ where: { id: req.query.id } });
+
+    await book.destroy();
+
+    return res.status(202).json({
+      message: "Книга успешно удалена",
+    });
+  } catch (e) {
+    res.status(409).json({
+      message: e,
+    });
   }
 });
 

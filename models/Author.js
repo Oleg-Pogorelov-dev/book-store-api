@@ -15,6 +15,10 @@ module.exports = (sequelize, DataTypes) => {
     {
       name: DataTypes.STRING,
       text: DataTypes.TEXT,
+      img: {
+        type: DataTypes.STRING,
+        defaultValue: "avatar.jpeg",
+      },
     },
     {
       sequelize,

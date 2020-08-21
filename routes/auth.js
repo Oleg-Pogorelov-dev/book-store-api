@@ -2,12 +2,10 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const router = express.Router();
-const multer = require("multer");
-const { v4: uuidv4 } = require("uuid");
-const DIR = "./public/";
+const { upload } = require("../helpers/multer");
 
 const db = require("../models");
-const { User, Order, Book, BookOrder } = db;
+const { User, Order, Book } = db;
 const { keyJwt } = require("../helpers/secretKeys");
 const {
   checkAccessToken,
@@ -17,31 +15,6 @@ const {
 } = require("../middleware/auth");
 const registerUser = require("../helpers/registerUser");
 const CustomError = require("../helpers/exceptions");
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, DIR);
-  },
-  filename: (req, file, cb) => {
-    const fileName = file.originalname.toLowerCase().split(" ").join("-");
-    cb(null, uuidv4() + "-" + fileName);
-  },
-});
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (
-      file.mimetype == "image/png" ||
-      file.mimetype == "image/jpg" ||
-      file.mimetype == "image/jpeg"
-    ) {
-      cb(null, true);
-    } else {
-      cb(null, false);
-      return cb(new Error("Only .png, .jpg and .jpeg format allowed!"));
-    }
-  },
-});
 
 router.post("/login", async function (req, res, next) {
   try {
@@ -142,7 +115,6 @@ router.put("/update_avatar", upload.single("avatar"), async function (
 
 router.put("/update_info", async function (req, res, next) {
   try {
-    console.log("USER", req);
     await User.update(
       {
         first_name: req.body.first_name,
