@@ -1,64 +1,40 @@
 const jwt = require("jsonwebtoken");
-const { keyJwt } = require("../helpers/secretKeys");
-const { v4: uuidv4 } = require("uuid");
+const keyJwt = require("../config/config.json").secretKey;
 const { User } = require("../db/db");
+const { createToken } = require("../utils/auth");
 
-const createAccessToken = (user) => {
-  const token = jwt.sign(
-    {
-      email: user.email,
-      userId: user._id,
-    },
-    keyJwt,
-    { expiresIn: 60 * 60 }
-  );
-
-  return token;
-};
-
-const createRefreshToken = async (user) => {
-  const refresh_token = jwt.sign(
-    {
-      id: uuidv4(),
-    },
-    keyJwt,
-    { expiresIn: 1000000 }
-  );
-
-  user.refresh_token = refresh_token;
-
+const isAuth = (req, res, next) => {
   try {
-    await user.save();
-    return refresh_token;
-  } catch {
-    console.log("Database disconnected");
-  }
-};
-
-const checkAccessToken = (req, res, next) => {
-  try {
-    const token = req.headers["access-token"];
-    jwt.verify(token, keyJwt);
+    const token = req.headers["authorization"].split(" ")[1];
+    const email = jwt.verify(token, keyJwt).email;
+    req.body.email = email;
     next();
-  } catch {
+  } catch (e) {
     res.status(401).json({
-      error: new Error("Invalid request"),
+      message: "Token expired",
     });
   }
 };
 
-const checkRefreshToken = async (req, res, next) => {
+const checkAndCreateRefreshToken = async (req, res, next) => {
   try {
+    const refresh_token = req.body.refresh_token;
+    console.log(refresh_token);
+    jwt.verify(refresh_token, keyJwt);
+
     const user = await User.findOne({
-      where: { refresh_token: req.headers["refresh-token"] },
+      where: { refresh_token },
     });
 
-    const token = await createAccessToken(user);
-    const refresh_token = await createRefreshToken(user);
+    const token = createToken(user, 60 * 15);
+    const new_refresh_token = createToken(user, 60 * 60 * 72);
+
+    user.refresh_token = new_refresh_token;
+    await user.save();
 
     return res.status(201).json({
       token,
-      refresh_token,
+      refresh_token: new_refresh_token,
     });
   } catch {
     res.status(401).json({
@@ -68,8 +44,6 @@ const checkRefreshToken = async (req, res, next) => {
 };
 
 module.exports = {
-  createAccessToken,
-  createRefreshToken,
-  checkAccessToken,
-  checkRefreshToken,
+  isAuth,
+  checkAndCreateRefreshToken,
 };
