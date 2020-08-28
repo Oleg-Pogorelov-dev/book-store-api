@@ -24,7 +24,7 @@ async function books(req, res, next) {
 
     const books = await Book.findAndCountAll({
       where: filterOptinons,
-      limit: 12,
+      limit: req.query.booksLimit,
       offset: +req.query.offset,
       order: [[req.query.order_item, req.query.order_type]],
     });
@@ -116,7 +116,7 @@ async function search_book(req, res, next) {
           [Sequelize.Op.iLike]: `%${req.query.search}%`,
         },
       },
-      limit: 10,
+      limit: DEFAULT_SEARCH_LIMIT,
     });
 
     return res.status(200).json({

@@ -87,6 +87,7 @@ async function registration(req, res, next) {
 }
 
 async function profile(req, res, next) {
+  console.log("FDSFDF", req);
   try {
     const user = await User.findOne({
       where: { email: req.body.email },
