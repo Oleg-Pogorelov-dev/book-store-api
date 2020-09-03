@@ -5,6 +5,12 @@ const { Author } = db;
 
 async function author(req, res, next) {
   try {
+    if (!+req.query.id) {
+      return res.status(404).json({
+        message: "Автор не найден.",
+      });
+    }
+
     const author = await Author.findOne({ where: { id: +req.query.id } });
 
     if (!author) {

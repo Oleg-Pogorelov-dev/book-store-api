@@ -1,15 +1,13 @@
 const jwt = require("jsonwebtoken");
 const keyJwt = require("../config/config.json").secretKey;
-const { User } = require("../db/db");
+const { User } = require("../models");
 const { createToken } = require("../utils/auth");
 
 const isAuth = (req, res, next) => {
   try {
-    console.log("SESESES", req.headers["authorization"].split(" ")[1]);
     const token = req.headers["authorization"].split(" ")[1];
     const email = jwt.verify(token, keyJwt).email;
     req.body.email = email;
-    console.log("!!!!", token);
     next();
   } catch (e) {
     res.status(401).json({

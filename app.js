@@ -25,6 +25,4 @@ app.use((err, req, res, next) => {
   res.status(statusCode).json({ message: err.message });
 });
 
-app.listen(3000, function () {
-  console.log("Сервер ожидает подключения...");
-});
+module.exports = app;

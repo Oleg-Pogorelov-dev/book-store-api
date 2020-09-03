@@ -39,6 +39,12 @@ async function books(req, res, next) {
 
 async function book(req, res, next) {
   try {
+    if (!+req.query.id) {
+      return res.status(404).json({
+        message: "Книга не найдена.",
+      });
+    }
+
     const book = await Book.findOne({ where: { id: +req.query.id } });
 
     if (!book) {
@@ -65,7 +71,6 @@ async function book(req, res, next) {
 }
 
 async function add_book(req, res, next) {
-  const url = req.protocol + "://" + req.get("host");
   try {
     if (!req.body.title) {
       return res.status(401).json({
@@ -171,7 +176,7 @@ async function delete_book(req, res, next) {
     await book.destroy();
 
     return res.status(202).json({
-      message: "Книга успешно удалена",
+      message: `Книга ${book.title} успешно удалена`,
     });
   } catch (e) {
     res.status(409).json({

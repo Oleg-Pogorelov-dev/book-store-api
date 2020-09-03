@@ -11,7 +11,6 @@ const createToken = (user, expiresIn) => {
       keyJwt,
       { expiresIn: expiresIn }
     );
-
     return token;
   } catch (e) {
     console.log(e);

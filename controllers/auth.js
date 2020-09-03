@@ -3,11 +3,10 @@ const bcrypt = require("bcryptjs");
 const db = require("../models");
 const { User, Order, Book } = db;
 const { createToken } = require("../utils/auth");
+const salt = bcrypt.genSaltSync(10);
 
 async function registerUser(email, password) {
   try {
-    const salt = bcrypt.genSaltSync(10);
-
     const user = await User.create({
       email: email,
       password: bcrypt.hashSync(password, salt),
@@ -87,7 +86,6 @@ async function registration(req, res, next) {
 }
 
 async function profile(req, res, next) {
-  console.log("FDSFDF", req);
   try {
     const user = await User.findOne({
       where: { email: req.body.email },
